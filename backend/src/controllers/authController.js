@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 
 const prisma = new PrismaClient();
 const JWT_SECRET = "rahasia_negara_api"; // Nanti bisa dipindah ke .env
+const { recordLog } = require("./logController");
 
 exports.login = async (req, res) => {
   try {
@@ -31,6 +32,7 @@ exports.login = async (req, res) => {
       { expiresIn: "1d" } // Token berlaku 1 hari
     );
 
+    await recordLog(user.id, "LOGIN", "Masuk ke dalam sistem");
     res.json({
       message: "Login Berhasil",
       token,

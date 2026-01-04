@@ -7,6 +7,9 @@ import OrderPage from "./OrderPage";
 import Shipping from "./Shipping";
 import Reports from "./Reports";
 import Purchasing from "./Purchasing";
+import IncomingOrders from "./IncomingOrders";
+import MedicineCatalog from "./MedicineCatalog";
+import MyOrders from "./MyOrders";
 
 // Komponen Pelindung (Hanya boleh masuk jika ada token)
 const PrivateRoute = ({ children }) => {
@@ -48,6 +51,30 @@ function App() {
           element={
             <PrivateRoute>
               <Shipping />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/incoming-orders"
+          element={
+            <PrivateRoute>
+              <IncomingOrders />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/medicine-catalog"
+          element={
+            <PrivateRoute>
+              <MedicineCatalog />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/my-orders"
+          element={
+            <PrivateRoute>
+              <MyOrders />
             </PrivateRoute>
           }
         />

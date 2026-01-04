@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { recordLog } = require("./logController");
 
 exports.createOrder = async (req, res) => {
   try {
@@ -98,6 +99,8 @@ exports.shipOrder = async (req, res) => {
       });
 
       return updatedOrder;
+
+      await recordLog(req.user.userId, "SHIPPING", `Memproses pengiriman Order #${orderId}`);
     });
 
     res.json({ message: "Pengiriman berhasil diproses & stok telah dikurangi.", data: result });
@@ -121,5 +124,67 @@ exports.getIncomingOrders = async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Gagal ambil data pesanan" });
+  }
+};
+
+// ... kode lama ...
+
+// BARU: Ambil Daftar Pesanan yang SUDAH DIKIRIM (History Pengiriman)
+// ... kode atas ...
+
+exports.getShippedOrders = async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { status: "SHIPPED" },
+      include: {
+        user: { select: { name: true } },
+        items: { include: { product: true } },
+      },
+      // PERBAIKAN DISINI: Ganti 'updatedAt' menjadi 'createdAt'
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(orders);
+  } catch (error) {
+    // Tambahkan log ini agar kita bisa lihat error asli di terminal jika terjadi lagi
+    console.error("Error getShippedOrders:", error);
+    res.status(500).json({ message: "Gagal ambil data pengiriman" });
+  }
+};
+
+// ... kode lama ...
+
+// BARU: Ambil Riwayat Pesanan Saya (Spesifik User Login)
+exports.getMyOrders = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Dari token
+    const orders = await prisma.order.findMany({
+      where: { userId: parseInt(userId) },
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Gagal ambil riwayat pesanan" });
+  }
+};
+
+// BARU: Konfirmasi Pesanan Diterima (Oleh Apotek)
+exports.completeOrder = async (req, res) => {
+  const { orderId } = req.params;
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
+
+    if (!order) return res.status(404).json({ message: "Pesanan tidak ditemukan" });
+    if (order.status !== "SHIPPED") return res.status(400).json({ message: "Pesanan belum dikirim atau sudah selesai" });
+
+    // Update Status jadi COMPLETED
+    await prisma.order.update({
+      where: { id: parseInt(orderId) },
+      data: { status: "COMPLETED" },
+    });
+
+    res.json({ message: "Pesanan selesai diterima." });
+  } catch (error) {
+    res.status(500).json({ message: "Gagal konfirmasi pesanan" });
   }
 };

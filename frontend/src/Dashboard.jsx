@@ -1,126 +1,139 @@
 import React, { useState, useEffect } from "react";
 import Layout from "./Layout";
-import { Loader, AlertCircle, Package, TrendingUp, AlertTriangle } from "lucide-react";
+import { Loader, AlertCircle, Clock, Activity, User } from "lucide-react";
 
 const Dashboard = () => {
-  const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState({ totalItems: 0, lowStock: 0, totalValue: 0 });
+  const [activities, setActivities] = useState([]); // Data Log
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/products")
-      .then((res) => {
-        if (!res.ok) throw new Error("Gagal ambil data");
-        return res.json();
-      })
-      .then((data) => {
-        setProducts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+    const fetchData = async () => {
+      try {
+        const headers = { Authorization: `Bearer ${localStorage.getItem("token")}` };
 
-  // Hitung Data Ringkas
-  const totalItems = products.length;
-  const lowStockItems = products.filter((p) => p.stock < 10).length;
-  const totalValue = products.reduce((acc, p) => acc + p.price * p.stock, 0);
+        // 1. Ambil Data Produk (Untuk Card Statistik)
+        const resProd = await fetch("http://localhost:5000/api/products");
+        const products = await resProd.json();
+
+        // Hitung Statistik
+        const totalItems = products.length;
+        const lowStock = products.filter((p) => p.stock < 10).length;
+        const totalValue = products.reduce((acc, p) => acc + p.price * p.stock, 0);
+        setStats({ totalItems, lowStock, totalValue });
+
+        // 2. Ambil Data Log Aktivitas (API Baru)
+        const resLog = await fetch("http://localhost:5000/api/logs", { headers });
+        if (resLog.ok) {
+          const logs = await resLog.json();
+          setActivities(logs);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <Layout>
       {loading && (
         <div className="flex justify-center p-20">
-          <Loader className="animate-spin text-indigo-600" />
+          <Loader className="animate-spin text-blue-600" />
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl flex gap-3 mb-6">
-          <AlertCircle /> {error}
-        </div>
-      )}
-
-      {!loading && !error && (
+      {!loading && (
         <div className="space-y-8">
-          {/* STATS CARDS dengan Gradient */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-lg transition-all">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-50 rounded-full blur-xl opacity-50"></div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
-                  <Package size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Total Produk</p>
-                  <h3 className="text-2xl font-bold text-slate-800">{totalItems} SKU</h3>
-                </div>
-              </div>
+          {/* STATS CARDS (Sama seperti sebelumnya) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">TOTAL SKU</p>
+              <h3 className="text-3xl font-bold text-gray-800">{stats.totalItems}</h3>
             </div>
-
-            <div className="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-lg transition-all">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-emerald-50 rounded-full blur-xl opacity-50"></div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Nilai Aset</p>
-                  <h3 className="text-2xl font-bold text-slate-800">Rp {totalValue.toLocaleString("id-ID")}</h3>
-                </div>
-              </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-orange-400">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">PESANAN BARU</p>
+              <h3 className="text-3xl font-bold text-gray-800">5</h3> {/* Masih dummy/placeholder */}
             </div>
-
-            <div className="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:shadow-lg transition-all">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-rose-50 rounded-full blur-xl opacity-50"></div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-rose-100 text-rose-600 rounded-xl">
-                  <AlertTriangle size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Stok Menipis</p>
-                  <h3 className="text-2xl font-bold text-slate-800">{lowStockItems} Item</h3>
-                </div>
-              </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ASET GUDANG</p>
+              <h3 className="text-2xl font-bold text-gray-800 truncate">Rp {stats.totalValue.toLocaleString("id-ID")}</h3>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">STOK KRITIS</p>
+              <h3 className="text-3xl font-bold text-gray-800">{stats.lowStock}</h3>
             </div>
           </div>
 
-          {/* TABEL MODERN */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-              <h3 className="font-bold text-lg text-slate-800">Inventaris Gudang</h3>
-              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Live Data</span>
+          {/* TABEL LOG AKTIVITAS REAL-TIME */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                  <Activity size={20} className="text-blue-600" /> Log Aktivitas User
+                </h3>
+                <p className="text-sm text-gray-500">Memantau login dan tindakan pengelolaan stok secara real-time.</p>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-slate-600">
-                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-xs border-b border-slate-200">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 text-gray-500 font-semibold uppercase tracking-wider text-xs border-b border-gray-100">
                   <tr>
-                    <th className="py-4 px-6">Nama Produk</th>
-                    <th className="py-4 px-6">Tipe</th>
-                    <th className="py-4 px-6">Lokasi</th>
-                    <th className="py-4 px-6 text-right">Harga</th>
-                    <th className="py-4 px-6 text-center">Status Stok</th>
+                    <th className="py-3 px-6">WAKTU</th>
+                    <th className="py-3 px-6">USER</th>
+                    <th className="py-3 px-6">TIPE AKSI</th>
+                    <th className="py-3 px-6">DETAIL AKTIVITAS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {products.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-4 px-6 font-medium text-slate-800">{item.name}</td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.type === "Obat Keras" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>{item.type}</span>
-                      </td>
-                      <td className="py-4 px-6 text-slate-500">{item.location}</td>
-                      <td className="py-4 px-6 text-right font-medium">Rp {item.price.toLocaleString("id-ID")}</td>
-                      <td className="py-4 px-6 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className={`font-bold text-lg ${item.stock < 10 ? "text-red-500" : "text-emerald-600"}`}>{item.stock}</span>
-                          <span className="text-[10px] text-slate-400">{item.unit}</span>
-                        </div>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {activities.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="text-center py-6 text-gray-400">
+                        Belum ada aktivitas terekam.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    activities.map((log) => (
+                      <tr key={log.id} className="hover:bg-gray-50 transition">
+                        <td className="py-4 px-6 text-gray-500 font-mono text-xs">
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} />
+                            {new Date(log.createdAt).toLocaleString("id-ID")}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">{log.user.name.charAt(0)}</div>
+                            <div>
+                              <p className="font-bold text-gray-700">{log.user.name}</p>
+                              <p className="text-[10px] text-gray-400 uppercase">{log.user.role}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`px-2 py-1 rounded-md text-xs font-bold border ${
+                              log.action === "LOGIN"
+                                ? "bg-blue-50 text-blue-600 border-blue-100"
+                                : log.action === "RESTOCK"
+                                ? "bg-green-50 text-green-600 border-green-100"
+                                : log.action === "SHIPPING"
+                                ? "bg-orange-50 text-orange-600 border-orange-100"
+                                : "bg-gray-50 text-gray-600 border-gray-200"
+                            }`}
+                          >
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-gray-700 font-medium">{log.details}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

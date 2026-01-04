@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { recordLog } = require("./logController");
 
 // 1. Ambil Data Supplier
 exports.getSuppliers = async (req, res) => {
@@ -43,24 +44,28 @@ exports.createPO = async (req, res) => {
 
 // 3. TERIMA BARANG (Penting: Ini pengganti 'Input Stok Manual')
 // Saat PO diterima, stok obat otomatis bertambah sesuai DFD arus 2.0 -> 3.0
+// backend/src/controllers/purchaseController.js
+
 exports.receivePO = async (req, res) => {
   const { poId } = req.params;
 
   try {
+    // 1. Jalankan Transaksi DATABASE (Hanya untuk Data Penting)
     await prisma.$transaction(async (tx) => {
-      // Ambil data PO
+      // Ambil Data PO
       const po = await tx.purchaseOrder.findUnique({
         where: { id: parseInt(poId) },
         include: { items: true },
       });
 
+      if (!po) throw new Error("PO tidak ditemukan.");
       if (po.status === "RECEIVED") throw new Error("PO ini sudah diterima sebelumnya.");
 
-      // Loop items untuk TAMBAH STOK
+      // Loop update stok
       for (const item of po.items) {
         await tx.product.update({
           where: { id: item.productId },
-          data: { stock: { increment: item.qty } }, // Stok Nambah Disini
+          data: { stock: { increment: item.qty } },
         });
       }
 
@@ -70,10 +75,17 @@ exports.receivePO = async (req, res) => {
         data: { status: "RECEIVED" },
       });
     });
+    // <--- TRANSAKSI SELESAI & DI-COMMIT DI SINI
 
+    // 2. CATAT LOG DI LUAR TRANSAKSI (Agar lebih cepat)
+    // Kode ini hanya akan jalan jika transaksi di atas sukses (tidak error)
+    await recordLog(req.user.userId, "RESTOCK", `Menerima barang dari PO #${poId}`);
+
+    // 3. Kirim Respon Sukses
     res.json({ message: "Barang diterima! Stok gudang telah diperbarui." });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error(error);
+    res.status(400).json({ message: error.message || "Gagal memproses penerimaan barang" });
   }
 };
 

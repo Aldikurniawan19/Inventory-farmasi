@@ -9,19 +9,35 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-// 1. Tabel Pengguna (Admin, Apotek, Gudang, dll)
+// ... generator dan datasource di atas biarkan saja ...
+
+// 1. Model User (HANYA BOLEH ADA SATU BLOK INI)
 model User {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  password       String
+  name           String
+  role           String          // GUDANG, APOTEK, PURCHASING
+  createdAt      DateTime        @default(now())
+
+  // Relasi yang sudah ada sebelumnya
+  orders         Order[]
+  purchaseOrders PurchaseOrder[]
+
+  // --- TAMBAHAN BARU (Pastikan baris ini ada) ---
+  logs           ActivityLog[]   
+}
+
+// ... model Product, Order, dll biarkan saja ...
+
+// Model Activity Log (Pastikan ini ada di paling bawah)
+model ActivityLog {
   id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  role      String   
-  name      String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   
+  details   String   
   createdAt DateTime @default(now())
-  
-  orders    Order[]           // Relasi ke Pesanan Penjualan (sudah ada)
-  
-  // TAMBAHKAN BARIS INI:
-  purchaseOrders PurchaseOrder[] // Relasi ke PO Pembelian
 }
 
 // 2. Tabel Produk (Obat)

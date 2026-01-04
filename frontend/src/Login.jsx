@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { KeyRound, User, Hexagon } from "lucide-react"; // Pakai Hexagon untuk logo
+import { KeyRound, User, Hexagon } from "lucide-react"; 
 
 const Login = () => {
   const [username, setUsername] = useState("");

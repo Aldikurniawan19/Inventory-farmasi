@@ -51,6 +51,28 @@ async function main() {
     },
   });
 
+  // ... kode user lain di atas ...
+
+  // 7. Buat 3 User Gudang Baru
+  const gudangStaffs = [
+    { name: "Andi Gudang", username: "gudang_andi" },
+    { name: "Budi Logistik", username: "gudang_budi" },
+    { name: "Citra Stockist", username: "gudang_citra" },
+  ];
+
+  for (const staff of gudangStaffs) {
+    await prisma.user.upsert({
+      where: { username: staff.username },
+      update: {},
+      create: {
+        username: staff.username,
+        password: passwordHash, // Password sama: 123456
+        name: staff.name,
+        role: "GUDANG",
+      },
+    });
+  }
+
   // 6. Buat Data Supplier Dummy
   await prisma.supplier.createMany({
     data: [
