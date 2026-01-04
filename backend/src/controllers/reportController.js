@@ -198,3 +198,45 @@ exports.getStockReport = async (req, res) => {
     res.status(500).send("Gagal generate PDF");
   }
 };
+
+// ... kode laporan stok sebelumnya ...
+
+// 5. BACKUP DATABASE (JSON) - BARU
+exports.backupDatabase = async (req, res) => {
+  try {
+    // 1. Ambil data dari SEMUA tabel
+    const users = await prisma.user.findMany();
+    const products = await prisma.product.findMany();
+    const suppliers = await prisma.supplier.findMany();
+    const orders = await prisma.order.findMany({ include: { items: true } });
+    const purchaseOrders = await prisma.purchaseOrder.findMany({ include: { items: true } });
+    const logs = await prisma.activityLog.findMany();
+
+    // 2. Bungkus jadi satu objek
+    const backupData = {
+      timestamp: new Date(),
+      system: "PharmaDist Warehouse System",
+      data: {
+        users,
+        products,
+        suppliers,
+        orders,
+        purchaseOrders,
+        logs,
+      },
+    };
+
+    // 3. Konversi ke JSON String
+    const jsonString = JSON.stringify(backupData, null, 2); // Indentasi 2 spasi agar rapi
+
+    // 4. Kirim sebagai File Download
+    const filename = `Backup_Gudang_${new Date().toISOString().split("T")[0]}.json`;
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+    res.send(jsonString);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Gagal melakukan backup database" });
+  }
+};

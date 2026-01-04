@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from "react";
 import Layout from "./Layout";
-import { BarChart3, Download, FileSpreadsheet, DollarSign, ShoppingCart, Package, Box, Loader } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
+// --- 1. IMPORT IKON DARI 'lucide-react' ---
+import {
+  BarChart3,
+  Download,
+  FileSpreadsheet,
+  TrendingUp,
+  ShoppingBag,
+  Loader,
+  Package, // Ikon Paket (Stok)
+  Database, // Ikon Database (Backup)
+  ShieldCheck, // Ikon Keamanan (Backup)
+} from "lucide-react";
+
+// --- 2. IMPORT GRAFIK DARI 'recharts' ---
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from "recharts";
 
 const Reports = () => {
   const [stats, setStats] = useState(null);
@@ -12,7 +26,10 @@ const Reports = () => {
     fetch("http://localhost:5000/api/reports", {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Gagal fetch");
+        return res.json();
+      })
       .then((data) => {
         setStats(data);
         setLoading(false);
@@ -23,7 +40,8 @@ const Reports = () => {
       });
   }, []);
 
-  const handleDownload = (type) => {
+  // Fungsi Download (Support PDF & JSON)
+  const handleDownload = (type, extension = "pdf") => {
     const token = localStorage.getItem("token");
     const url = `http://localhost:5000/api/reports/${type}`;
 
@@ -33,17 +51,16 @@ const Reports = () => {
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `Laporan_${type}_${new Date().toISOString().split("T")[0]}.pdf`;
+        a.download = `Laporan_${type}_${new Date().toISOString().split("T")[0]}.${extension}`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         window.URL.revokeObjectURL(downloadUrl);
-      });
+      })
+      .catch((err) => console.error("Gagal download", err));
   };
 
   const formatRupiah = (val) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(val);
-
-  // Warna untuk Pie Chart
   const COLORS = ["#3B82F6", "#F59E0B", "#10B981", "#EF4444"];
 
   return (
@@ -72,7 +89,7 @@ const Reports = () => {
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-500 mb-1">Total Pesanan</p>
                 <h3 className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-                  <ShoppingCart size={24} /> {stats.orders} Transaksi
+                  <ShoppingBag size={24} /> {stats.orders} Transaksi
                 </h3>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -84,14 +101,14 @@ const Reports = () => {
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-sm text-gray-500 mb-1">Total Stok Fisik</p>
                 <h3 className="text-2xl font-bold text-gray-700 flex items-center gap-2">
-                  <Box size={24} /> {stats.stock} Unit
+                  <Package size={24} /> {stats.stock} Unit
                 </h3>
               </div>
             </div>
 
             {/* 2. CHARTS SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Chart Kiri: Top 5 Stok (Lebar 2/3) */}
+              {/* Chart Kiri: Top 5 Stok */}
               <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-700 mb-4">Stok Obat (Top 5)</h3>
                 <div style={{ width: "100%", height: 300 }}>
@@ -107,7 +124,7 @@ const Reports = () => {
                 </div>
               </div>
 
-              {/* Chart Kanan: Status Pesanan (Lebar 1/3) */}
+              {/* Chart Kanan: Status Pesanan */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-700 mb-4">Status Pesanan</h3>
                 <div style={{ width: "100%", height: 300 }}>
@@ -126,15 +143,10 @@ const Reports = () => {
               </div>
             </div>
 
-            {/* 3. DOWNLOAD SECTION (TETAP ADA) */}
-            {/* ... kode grafik di atasnya ... */}
-
-            {/* 3. DOWNLOAD SECTION */}
+            {/* 3. DOWNLOAD SECTION (PDF) */}
             <h3 className="font-bold text-lg text-gray-800 mt-4">Unduh Data Laporan</h3>
-
-            {/* UBAH GRID JADI 3 KOLOM (md:grid-cols-3) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1: Stok (BARU) */}
+              {/* Card 1: Stok */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="bg-purple-100 p-3 rounded-lg text-purple-600">
@@ -142,7 +154,7 @@ const Reports = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-800">Laporan Stok</h4>
-                    <p className="text-sm text-gray-500">Data ketersediaan barang saat ini</p>
+                    <p className="text-sm text-gray-500">Data ketersediaan barang (PDF)</p>
                   </div>
                 </div>
                 <button
@@ -161,7 +173,7 @@ const Reports = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-800">Laporan Pengiriman</h4>
-                    <p className="text-sm text-gray-500">Data transaksi keluar (Sales)</p>
+                    <p className="text-sm text-gray-500">Data transaksi keluar (PDF)</p>
                   </div>
                 </div>
                 <button
@@ -180,7 +192,7 @@ const Reports = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-800">Laporan Pembelian</h4>
-                    <p className="text-sm text-gray-500">Data belanja Supplier (PO)</p>
+                    <p className="text-sm text-gray-500">Data belanja Supplier (PDF)</p>
                   </div>
                 </div>
                 <button
@@ -190,6 +202,23 @@ const Reports = () => {
                   <Download size={18} /> Unduh PDF
                 </button>
               </div>
+            </div>
+
+            {/* 4. BACKUP SECTION (JSON) */}
+            <h3 className="font-bold text-lg text-gray-800 mt-8">Database & Keamanan</h3>
+            <div className="bg-slate-800 text-white p-6 rounded-xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-slate-700 p-4 rounded-full">
+                  <Database size={32} className="text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xl">Backup Data Gudang Lengkap</h4>
+                  <p className="text-slate-300 text-sm max-w-lg">Unduh seluruh data database (User, Produk, Pesanan, Supplier, Log) dalam format JSON untuk cadangan pemulihan sistem.</p>
+                </div>
+              </div>
+              <button onClick={() => handleDownload("backup", "json")} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition shadow-lg shadow-blue-900/50 whitespace-nowrap">
+                <ShieldCheck size={20} /> Backup Sekarang
+              </button>
             </div>
           </>
         )}

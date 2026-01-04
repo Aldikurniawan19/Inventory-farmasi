@@ -62,6 +62,12 @@ app.get("/api/reports/shipping", verifyToken, reportController.getShippingReport
 app.get("/api/reports/purchasing", verifyToken, reportController.getPurchasingReport);
 app.get("/api/reports/stock", verifyToken, reportController.getStockReport);
 
+// ... route laporan lainnya ...
+app.get("/api/reports/stock", verifyToken, reportController.getStockReport);
+
+// TAMBAHKAN INI:
+app.get("/api/reports/backup", verifyToken, reportController.backupDatabase);
+
 // HAPUS BARIS INI JIKA MASIH ADA DI KODE ANDA:
 // app.get("/api/reports/chart", verifyToken, reportController.getChartData);
 // (Fungsi getChartData sudah tidak ada di controller baru, ini penyebab errornya)
